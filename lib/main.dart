@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:login_signup/screens/welcome_screen.dart';
+import 'package:login_signup/View/screens/welcome_screen.dart';
 import 'package:login_signup/theme/theme.dart';
 
 void main() {
