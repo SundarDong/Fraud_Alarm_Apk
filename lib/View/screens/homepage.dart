@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+void main() {
+  runApp(const AlarmApp());
+}
+
 class AlarmApp extends StatelessWidget {
   const AlarmApp({Key? key}) : super(key: key);
 
@@ -27,43 +31,54 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
   String? _selectedRingtonePath;
 
   Future<void> _pickRingtone() async {
-    // Request permissions
-    if (Platform.isAndroid) {
-      var status = await Permission.storage.request();
-      if (!status.isGranted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Storage permission is required')),
-        );
-        return;
-      }
-    }
-
     try {
+      // Request multiple permissions for Android
+      if (Platform.isAndroid) {
+        Map<Permission, PermissionStatus> permissions = await [
+          Permission.storage,
+          Permission.manageExternalStorage,
+          Permission.mediaLibrary,
+        ].request();
+
+        bool isGranted = permissions.values.any((status) => status.isGranted);
+
+        if (!isGranted) {
+          _showSnackBar('Storage permissions are required');
+          await openAppSettings(); // Open app settings for manual permission
+          return;
+        }
+      }
+
+      // Open file picker
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.audio,
         allowMultiple: false,
       );
 
-      if (result != null) {
+      if (result != null && result.files.single.path != null) {
         setState(() {
           _selectedRingtonePath = result.files.single.path;
         });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Selected: ${_getFileName()}')),
-        );
+        _showSnackBar('Audio selected: ${_getFileName()}');
+      } else {
+        _showSnackBar('No audio file selected');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking file: $e')),
-      );
+      print('Audio selection error: $e');
+      _showSnackBar('Error selecting audio: $e');
     }
   }
 
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   String _getFileName() {
-    return _selectedRingtonePath != null 
-      ? _selectedRingtonePath!.split('/').last 
-      : 'Select Ringtone';
+    return _selectedRingtonePath != null
+        ? _selectedRingtonePath!.split('/').last
+        : 'Select Ringtone';
   }
 
   @override
@@ -146,8 +161,8 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                 const Text(
                   'Choose Audio',
                   style: TextStyle(
-                    color: Colors.white, 
-                    fontWeight: FontWeight.bold
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -179,9 +194,9 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
-                          Icons.music_note, 
-                          color: Colors.white, 
-                          size: 20
+                          Icons.music_note,
+                          color: Colors.white,
+                          size: 20,
                         ),
                       ),
                     ),
