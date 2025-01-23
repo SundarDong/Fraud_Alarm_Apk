@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AlarmApp extends StatelessWidget {
   const AlarmApp({Key? key}) : super(key: key);
@@ -21,6 +24,47 @@ class AlarmHomePage extends StatefulWidget {
 
 class _AlarmHomePageState extends State<AlarmHomePage> {
   double _alarmVolume = 0.5;
+  String? _selectedRingtonePath;
+
+  Future<void> _pickRingtone() async {
+    // Request permissions
+    if (Platform.isAndroid) {
+      var status = await Permission.storage.request();
+      if (!status.isGranted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Storage permission is required')),
+        );
+        return;
+      }
+    }
+
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        allowMultiple: false,
+      );
+
+      if (result != null) {
+        setState(() {
+          _selectedRingtonePath = result.files.single.path;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Selected: ${_getFileName()}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error picking file: $e')),
+      );
+    }
+  }
+
+  String _getFileName() {
+    return _selectedRingtonePath != null 
+      ? _selectedRingtonePath!.split('/').last 
+      : 'Select Ringtone';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,9 +108,7 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      // ignore: deprecated_member_use
                       Colors.purple.withOpacity(0.5),
-                      // ignore: deprecated_member_use
                       Colors.blue.withOpacity(0.5),
                     ],
                     begin: Alignment.topLeft,
@@ -77,11 +119,14 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
               Stack(
                 alignment: Alignment.center,
                 children: [
-                  Image.asset(
-                    'assets/images/AlarmPic.png',
-                    width: 150,
-                    height: 150,
-                    fit: BoxFit.contain,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/images/AlarmPic.png',
+                      width: 150,
+                      height: 150,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ],
               )
@@ -92,35 +137,55 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
             margin: const EdgeInsets.symmetric(horizontal: 20),
             padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(
-              // ignore: deprecated_member_use
               color: Colors.blue.withOpacity(0.2),
               borderRadius: BorderRadius.circular(15),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.calendar_today, color: Colors.white),
-                const SizedBox(width: 15),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const Text(
+                  'Choose Audio',
+                  style: TextStyle(
+                    color: Colors.white, 
+                    fontWeight: FontWeight.bold
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
                   children: [
-                    Text(
-                      'Time and Date',
-                      style: TextStyle(color: Colors.white),
+                    const Icon(Icons.music_note, color: Colors.white),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Audio Track',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          Text(
+                            _getFileName(),
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
                     ),
-                    Text(
-                      '9:37 am 8/10/2014',
-                      style: TextStyle(color: Colors.grey),
+                    GestureDetector(
+                      onTap: _pickRingtone,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.music_note, 
+                          color: Colors.white, 
+                          size: 20
+                        ),
+                      ),
                     ),
                   ],
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 20),
                 ),
               ],
             ),
@@ -136,7 +201,7 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                   style: TextStyle(color: Colors.white),
                 ),
                 Text(
-                  'Melodican',
+                  'Volume',
                   style: TextStyle(color: Colors.grey[400]),
                 ),
               ],
