@@ -1,9 +1,8 @@
-// ignore_for_file: deprecated_member_use
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 void main() {
   runApp(const AlarmApp());
@@ -15,7 +14,13 @@ class AlarmApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData.dark(),
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF1A1B1E),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+      ),
       home: const AlarmHomePage(),
     );
   }
@@ -31,6 +36,8 @@ class AlarmHomePage extends StatefulWidget {
 class _AlarmHomePageState extends State<AlarmHomePage> {
   double _alarmVolume = 0.5;
   String? _selectedRingtonePath;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  PlayerState _audioPlayerState = PlayerState.stopped;
 
   Future<void> _pickRingtone() async {
     try {
@@ -46,7 +53,7 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
 
         if (!isGranted) {
           _showSnackBar('Storage permissions are required');
-          await openAppSettings(); // Open app settings for manual permission
+          await openAppSettings();
           return;
         }
       }
@@ -71,6 +78,37 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
     }
   }
 
+  Future<void> _playRingtone() async {
+    if (_selectedRingtonePath != null) {
+      try {
+        await _audioPlayer.setVolume(_alarmVolume);
+        Source audioSource = DeviceFileSource(_selectedRingtonePath!);
+        await _audioPlayer.play(audioSource);
+        
+        _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
+          setState(() {
+            _audioPlayerState = state;
+          });
+        });
+
+        _showSnackBar('Playing: ${_getFileName()}');
+      } catch (e) {
+        print('Audio playback error: $e');
+        _showSnackBar('Error playing audio: $e');
+      }
+    } else {
+      _showSnackBar('Please select an audio file first');
+    }
+  }
+
+  Future<void> _stopRingtone() async {
+    await _audioPlayer.stop();
+    setState(() {
+      _audioPlayerState = PlayerState.stopped;
+    });
+    _showSnackBar('Audio stopped');
+  }
+
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -81,6 +119,12 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
     return _selectedRingtonePath != null
         ? _selectedRingtonePath!.split('/').last
         : 'Select Ringtone';
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
   }
 
   @override
@@ -125,9 +169,7 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      // ignore: deprecated_member_use
                       Colors.purple.withOpacity(0.5),
-                      // ignore: deprecated_member_use
                       Colors.blue.withOpacity(0.5),
                     ],
                     begin: Alignment.topLeft,
@@ -135,19 +177,14 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                   ),
                 ),
               ),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.asset(
-                      'assets/images/AlarmPic.png',
-                      width: 150,
-                      height: 150,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ],
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/images/AlarmPic.png',
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.contain,
+                ),
               )
             ],
           ),
@@ -231,9 +268,45 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
             onChanged: (value) {
               setState(() {
                 _alarmVolume = value;
+                _audioPlayer.setVolume(value);
               });
             },
             activeColor: Colors.green,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: _playRingtone,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.play_arrow),
+                    const SizedBox(width: 5),
+                    Text(_audioPlayerState == PlayerState.playing ? 'Playing' : 'Play'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 20),
+              ElevatedButton(
+                onPressed: _stopRingtone,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.stop),
+                    SizedBox(width: 5),
+                    Text('Stop'),
+                  ],
+                ),
+              ),
+            ],
           ),
           const Spacer(),
           Padding(
