@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -123,7 +125,9 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
+                      // ignore: deprecated_member_use
                       Colors.purple.withOpacity(0.5),
+                      // ignore: deprecated_member_use
                       Colors.blue.withOpacity(0.5),
                     ],
                     begin: Alignment.topLeft,
