@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const AlarmApp());
@@ -38,10 +39,34 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
   String? _selectedRingtonePath;
   final AudioPlayer _audioPlayer = AudioPlayer();
   PlayerState _audioPlayerState = PlayerState.stopped;
+  static const String RINGTONE_PATH_KEY = 'ringtone_path';
+  static const String VOLUME_KEY = 'volume_level';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedSettings();
+  }
+
+  Future<void> _loadSavedSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _selectedRingtonePath = prefs.getString(RINGTONE_PATH_KEY);
+      _alarmVolume = prefs.getDouble(VOLUME_KEY) ?? 0.5;
+    });
+    await _audioPlayer.setVolume(_alarmVolume);
+  }
+
+  Future<void> _saveSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_selectedRingtonePath != null) {
+      await prefs.setString(RINGTONE_PATH_KEY, _selectedRingtonePath!);
+    }
+    await prefs.setDouble(VOLUME_KEY, _alarmVolume);
+  }
 
   Future<void> _pickRingtone() async {
     try {
-      // Request multiple permissions for Android
       if (Platform.isAndroid) {
         Map<Permission, PermissionStatus> permissions = await [
           Permission.storage,
@@ -58,7 +83,6 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
         }
       }
 
-      // Open file picker
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.audio,
         allowMultiple: false,
@@ -68,7 +92,8 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
         setState(() {
           _selectedRingtonePath = result.files.single.path;
         });
-        _showSnackBar('Audio selected: ${_getFileName()}');
+        await _saveSettings(); // Save the new ringtone path
+        _showSnackBar('Audio selected and saved: ${_getFileName()}');
       } else {
         _showSnackBar('No audio file selected');
       }
@@ -84,7 +109,7 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
         await _audioPlayer.setVolume(_alarmVolume);
         Source audioSource = DeviceFileSource(_selectedRingtonePath!);
         await _audioPlayer.play(audioSource);
-        
+
         _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
           setState(() {
             _audioPlayerState = state;
@@ -270,6 +295,7 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                 _alarmVolume = value;
                 _audioPlayer.setVolume(value);
               });
+              _saveSettings(); // Save volume changes
             },
             activeColor: Colors.green,
           ),
@@ -281,13 +307,16 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                 onPressed: _playRingtone,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
                 child: Row(
                   children: [
                     const Icon(Icons.play_arrow),
                     const SizedBox(width: 5),
-                    Text(_audioPlayerState == PlayerState.playing ? 'Playing' : 'Play'),
+                    Text(_audioPlayerState == PlayerState.playing
+                        ? 'Playing'
+                        : 'Play'),
                   ],
                 ),
               ),
@@ -296,7 +325,8 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                 onPressed: _stopRingtone,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
                 child: const Row(
                   children: [
