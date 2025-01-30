@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:login_signup/View/screens/welcome_screen.dart';
-import 'package:login_signup/theme/theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const AlarmApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class AlarmApp extends StatelessWidget {
+  const AlarmApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: lightMode,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF1A1B1E),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+      ),
       home: const WelcomeScreen(),
     );
   }
