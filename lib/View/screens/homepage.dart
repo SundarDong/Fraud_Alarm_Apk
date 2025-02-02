@@ -149,7 +149,8 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
                 onTap: () async {
                   bool success = await _controller.pickRingtone();
                   if (success) {
-                    _showSnackBar('Audio selected and saved: ${_controller.getFileName()}');
+                    _showSnackBar(
+                        'Audio selected and saved: ${_controller.getFileName()}');
                     setState(() {});
                   } else {
                     _showSnackBar('No audio file selected');
@@ -227,7 +228,9 @@ class _AlarmHomePageState extends State<AlarmHomePage> {
             children: [
               const Icon(Icons.play_arrow),
               const SizedBox(width: 5),
-              Text(_audioPlayerState == PlayerState.playing ? 'Playing' : 'Play'),
+              Text(_audioPlayerState == PlayerState.playing
+                  ? 'Playing'
+                  : 'Play'),
             ],
           ),
         ),
